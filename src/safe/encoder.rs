@@ -521,6 +521,16 @@ pub struct EncoderInitParams<'a> {
 }
 
 impl<'a> EncoderInitParams<'a> {
+    /// Never splits a frame across the card's encoders. MV-HEVC refuses
+    /// split encoding, which the driver may otherwise choose by itself on
+    /// a card with several encoders.
+    pub fn disable_split_encode(&mut self) -> &mut Self {
+        self.param.set_splitEncodeMode(
+            crate::sys::nvEncodeAPI::NV_ENC_SPLIT_ENCODE_MODE::NV_ENC_SPLIT_DISABLE_MODE as u32,
+        );
+        self
+    }
+
     /// Create a new builder for [`EncoderInitParams`], which is a wrapper for
     /// [`NV_ENC_INITIALIZE_PARAMS`].
     #[must_use]
