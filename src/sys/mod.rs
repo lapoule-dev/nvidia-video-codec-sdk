@@ -20,3 +20,11 @@ pub use linux_sys::*;
 mod windows_sys;
 #[cfg(target_os = "windows")]
 pub use windows_sys::*;
+
+// `version.rs` and `guid.rs` follow the SDK 13.0 header, but the Windows
+// bindings were generated from SDK 12.1: their struct layouts do not match.
+#[cfg(target_os = "windows")]
+compile_error!(
+    "the Windows bindings have not been regenerated for NVENC API 13.0; run \
+     src/sys/windows_sys/bindgen.ps1 against src/sys/headers/nvEncodeAPI.h"
+);

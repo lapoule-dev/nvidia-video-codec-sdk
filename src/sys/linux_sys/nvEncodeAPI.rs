@@ -24,6 +24,10 @@ pub type NV_ENC_QP = _NV_ENC_QP;
 pub type NV_ENC_RC_PARAMS = _NV_ENC_RC_PARAMS;
 pub type NV_ENC_CLOCK_TIMESTAMP_SET = _NV_ENC_CLOCK_TIMESTAMP_SET;
 pub type NV_ENC_TIME_CODE = _NV_ENC_TIME_CODE;
+pub type HEVC_3D_REFERENCE_DISPLAY_INFO = _HEVC_3D_REFERENCE_DISPLAY_INFO;
+pub type CHROMA_POINTS = _CHROMA_POINTS;
+pub type MASTERING_DISPLAY_INFO = _MASTERING_DISPLAY_INFO;
+pub type CONTENT_LIGHT_LEVEL = _CONTENT_LIGHT_LEVEL;
 pub type NV_ENC_CONFIG_H264_VUI_PARAMETERS = _NV_ENC_CONFIG_H264_VUI_PARAMETERS;
 pub type NV_ENC_CONFIG_HEVC_VUI_PARAMETERS = NV_ENC_CONFIG_H264_VUI_PARAMETERS;
 pub type NVENC_EXTERNAL_ME_HINT_COUNTS_PER_BLOCKTYPE = _NVENC_EXTERNAL_ME_HINT_COUNTS_PER_BLOCKTYPE;
@@ -78,6 +82,22 @@ pub type PNVENCGETENCODEGUIDS = ::core::option::Option<
     unsafe extern "C" fn(
         encoder: *mut ::core::ffi::c_void,
         GUIDs: *mut GUID,
+        guidArraySize: u32,
+        GUIDCount: *mut u32,
+    ) -> NVENCSTATUS,
+>;
+pub type PNVENCGETENCODEPROFILEGUIDCOUNT = ::core::option::Option<
+    unsafe extern "C" fn(
+        encoder: *mut ::core::ffi::c_void,
+        encodeGUID: GUID,
+        encodeProfileGUIDCount: *mut u32,
+    ) -> NVENCSTATUS,
+>;
+pub type PNVENCGETENCODEPROFILEGUIDS = ::core::option::Option<
+    unsafe extern "C" fn(
+        encoder: *mut ::core::ffi::c_void,
+        encodeGUID: GUID,
+        profileGUIDs: *mut GUID,
         guidArraySize: u32,
         GUIDCount: *mut u32,
     ) -> NVENCSTATUS,
@@ -349,6 +369,7 @@ pub struct _NV_ENC_RESTORE_ENCODER_STATE_PARAMS {
     pub version: u32,
     pub bufferIdx: u32,
     pub state: NV_ENC_STATE_RESTORE_TYPE,
+    pub reserved: u32,
     pub outputBitstream: NV_ENC_OUTPUT_PTR,
     pub completionEvent: *mut ::core::ffi::c_void,
     pub reserved1: [u32; 64usize],
@@ -361,7 +382,8 @@ pub struct _NV_ENC_OUTPUT_STATS_BLOCK {
     pub QP: u8,
     pub reserved: [u8; 3usize],
     pub bitcount: u32,
-    pub reserved1: [u32; 13usize],
+    pub satdCost: u32,
+    pub reserved1: [u32; 12usize],
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -370,7 +392,8 @@ pub struct _NV_ENC_OUTPUT_STATS_ROW {
     pub QP: u8,
     pub reserved: [u8; 3usize],
     pub bitcount: u32,
-    pub reserved1: [u32; 13usize],
+    pub satdCost: u32,
+    pub reserved1: [u32; 12usize],
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -383,10 +406,11 @@ pub struct _NV_ENC_ENCODE_OUT_PARAMS {
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct _NV_ENC_LOOKAHEAD_PIC_PARAMS {
     pub version: u32,
+    pub reserved: u32,
     pub inputBuffer: NV_ENC_INPUT_PTR,
     pub pictureType: NV_ENC_PIC_TYPE,
-    pub reserved: [u32; 64usize],
-    pub reserved1: [*mut ::core::ffi::c_void; 64usize],
+    pub reserved1: [u32; 63usize],
+    pub reserved2: [*mut ::core::ffi::c_void; 64usize],
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -399,7 +423,7 @@ pub struct _NV_ENC_CREATE_INPUT_BUFFER {
     pub reserved: u32,
     pub inputBuffer: NV_ENC_INPUT_PTR,
     pub pSysMemBuffer: *mut ::core::ffi::c_void,
-    pub reserved1: [u32; 57usize],
+    pub reserved1: [u32; 58usize],
     pub reserved2: [*mut ::core::ffi::c_void; 63usize],
 }
 #[repr(C)]
@@ -442,8 +466,9 @@ pub struct _NV_ENC_HEVC_MV_DATA {
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct _NV_ENC_CREATE_MV_BUFFER {
     pub version: u32,
+    pub reserved: u32,
     pub mvBuffer: NV_ENC_OUTPUT_PTR,
-    pub reserved1: [u32; 255usize],
+    pub reserved1: [u32; 254usize],
     pub reserved2: [*mut ::core::ffi::c_void; 63usize],
 }
 #[repr(C)]
@@ -483,7 +508,10 @@ pub struct _NV_ENC_RC_PARAMS {
     pub cbQPIndexOffset: i8,
     pub crQPIndexOffset: i8,
     pub reserved2: u16,
-    pub reserved: [u32; 4usize],
+    pub lookaheadLevel: NV_ENC_LOOKAHEAD_LEVEL,
+    pub viewBitrateRatios: [u8; 7usize],
+    pub reserved3: u8,
+    pub reserved1: u32,
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -497,6 +525,47 @@ pub struct _NV_ENC_CLOCK_TIMESTAMP_SET {
 pub struct _NV_ENC_TIME_CODE {
     pub displayPicStruct: NV_ENC_DISPLAY_PIC_STRUCT,
     pub clockTimestamp: [NV_ENC_CLOCK_TIMESTAMP_SET; 3usize],
+    pub skipClockTimestampInsertion: u32,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct _HEVC_3D_REFERENCE_DISPLAY_INFO {
+    pub _bitfield_align_1: [u32; 0],
+    pub _bitfield_1: __BindgenBitfieldUnit<[u8; 4usize]>,
+    pub precRefDisplayWidth: i32,
+    pub precRefViewingDist: i32,
+    pub numRefDisplaysMinus1: i32,
+    pub leftViewId: [i32; 32usize],
+    pub rightViewId: [i32; 32usize],
+    pub exponentRefDisplayWidth: [i32; 32usize],
+    pub mantissaRefDisplayWidth: [i32; 32usize],
+    pub exponentRefViewingDistance: [i32; 32usize],
+    pub mantissaRefViewingDistance: [i32; 32usize],
+    pub numSampleShiftPlus512: [i32; 32usize],
+    pub additionalShiftPresentFlag: [u8; 32usize],
+    pub reserved2: [u32; 4usize],
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct _CHROMA_POINTS {
+    pub x: u16,
+    pub y: u16,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct _MASTERING_DISPLAY_INFO {
+    pub g: CHROMA_POINTS,
+    pub b: CHROMA_POINTS,
+    pub r: CHROMA_POINTS,
+    pub whitePoint: CHROMA_POINTS,
+    pub maxLuma: u32,
+    pub minLuma: u32,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub struct _CONTENT_LIGHT_LEVEL {
+    pub maxContentLightLevel: u16,
+    pub maxPicAverageLightLevel: u16,
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -570,7 +639,10 @@ pub struct _NV_ENC_CONFIG_H264 {
     pub useBFramesAsRef: NV_ENC_BFRAME_REF_MODE,
     pub numRefL0: NV_ENC_NUM_REF_FRAMES,
     pub numRefL1: NV_ENC_NUM_REF_FRAMES,
-    pub reserved1: [u32; 267usize],
+    pub outputBitDepth: NV_ENC_BIT_DEPTH,
+    pub inputBitDepth: NV_ENC_BIT_DEPTH,
+    pub tfLevel: NV_ENC_TEMPORAL_FILTER_LEVEL,
+    pub reserved1: [u32; 264usize],
     pub reserved2: [*mut ::core::ffi::c_void; 64usize],
 }
 #[repr(C)]
@@ -580,7 +652,7 @@ pub struct _NV_ENC_CONFIG_HEVC {
     pub tier: u32,
     pub minCUSize: NV_ENC_HEVC_CUSIZE,
     pub maxCUSize: NV_ENC_HEVC_CUSIZE,
-    pub _bitfield_align_1: [u16; 0],
+    pub _bitfield_align_1: [u8; 0],
     pub _bitfield_1: __BindgenBitfieldUnit<[u8; 4usize]>,
     pub idrPeriod: u32,
     pub intraRefreshPeriod: u32,
@@ -598,7 +670,13 @@ pub struct _NV_ENC_CONFIG_HEVC {
     pub useBFramesAsRef: NV_ENC_BFRAME_REF_MODE,
     pub numRefL0: NV_ENC_NUM_REF_FRAMES,
     pub numRefL1: NV_ENC_NUM_REF_FRAMES,
-    pub reserved1: [u32; 214usize],
+    pub tfLevel: NV_ENC_TEMPORAL_FILTER_LEVEL,
+    pub disableDeblockingFilterIDC: u32,
+    pub outputBitDepth: NV_ENC_BIT_DEPTH,
+    pub inputBitDepth: NV_ENC_BIT_DEPTH,
+    pub numTemporalLayers: u32,
+    pub numViews: u32,
+    pub reserved1: [u32; 208usize],
     pub reserved2: [*mut ::core::ffi::c_void; 64usize],
 }
 #[repr(C)]
@@ -639,6 +717,7 @@ pub struct _NV_ENC_CONFIG_AV1 {
     pub maxNumRefFramesInDPB: u32,
     pub numTileColumns: u32,
     pub numTileRows: u32,
+    pub reserved2: u32,
     pub tileWidths: *mut u32,
     pub tileHeights: *mut u32,
     pub maxTemporalLayersMinus1: u32,
@@ -651,8 +730,13 @@ pub struct _NV_ENC_CONFIG_AV1 {
     pub filmGrainParams: *mut NV_ENC_FILM_GRAIN_PARAMS_AV1,
     pub numFwdRefs: NV_ENC_NUM_REF_FRAMES,
     pub numBwdRefs: NV_ENC_NUM_REF_FRAMES,
-    pub reserved1: [u32; 235usize],
-    pub reserved2: [*mut ::core::ffi::c_void; 62usize],
+    pub outputBitDepth: NV_ENC_BIT_DEPTH,
+    pub inputBitDepth: NV_ENC_BIT_DEPTH,
+    pub ltrNumFrames: u32,
+    pub numTemporalLayers: u32,
+    pub tfLevel: NV_ENC_TEMPORAL_FILTER_LEVEL,
+    pub reserved1: [u32; 230usize],
+    pub reserved3: [*mut ::core::ffi::c_void; 62usize],
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -700,6 +784,7 @@ pub struct _NV_ENC_INITIALIZE_PARAMS {
     pub _bitfield_align_1: [u32; 0],
     pub _bitfield_1: __BindgenBitfieldUnit<[u8; 4usize]>,
     pub privDataSize: u32,
+    pub reserved: u32,
     pub privData: *mut ::core::ffi::c_void,
     pub encodeConfig: *mut NV_ENC_CONFIG,
     pub maxEncodeWidth: u32,
@@ -709,24 +794,26 @@ pub struct _NV_ENC_INITIALIZE_PARAMS {
     pub bufferFormat: NV_ENC_BUFFER_FORMAT,
     pub numStateBuffers: u32,
     pub outputStatsLevel: NV_ENC_OUTPUT_STATS_LEVEL,
-    pub reserved: [u32; 285usize],
+    pub reserved1: [u32; 284usize],
     pub reserved2: [*mut ::core::ffi::c_void; 64usize],
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub struct _NV_ENC_RECONFIGURE_PARAMS {
     pub version: u32,
+    pub reserved: u32,
     pub reInitEncodeParams: NV_ENC_INITIALIZE_PARAMS,
     pub _bitfield_align_1: [u32; 0],
     pub _bitfield_1: __BindgenBitfieldUnit<[u8; 4usize]>,
-    pub __bindgen_padding_0: u32,
+    pub reserved2: u32,
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub struct _NV_ENC_PRESET_CONFIG {
     pub version: u32,
+    pub reserved: u32,
     pub presetCfg: NV_ENC_CONFIG,
-    pub reserved1: [u32; 255usize],
+    pub reserved1: [u32; 256usize],
     pub reserved2: [*mut ::core::ffi::c_void; 64usize],
 }
 #[repr(C)]
@@ -769,7 +856,7 @@ pub struct _NV_ENC_PIC_PARAMS_H264 {
     pub forceIntraSliceIdx: *mut u32,
     pub h264ExtPicParams: NV_ENC_PIC_PARAMS_H264_EXT,
     pub timeCode: NV_ENC_TIME_CODE,
-    pub reserved: [u32; 203usize],
+    pub reserved: [u32; 202usize],
     pub reserved2: [*mut ::core::ffi::c_void; 61usize],
 }
 #[repr(C)]
@@ -781,6 +868,7 @@ pub struct _NV_ENC_PIC_PARAMS_HEVC {
     pub forceIntraRefreshWithFrameCnt: u32,
     pub _bitfield_align_1: [u32; 0],
     pub _bitfield_1: __BindgenBitfieldUnit<[u8; 4usize]>,
+    pub reserved1: u32,
     pub sliceTypeData: *mut u8,
     pub sliceTypeArrayCnt: u32,
     pub sliceMode: u32,
@@ -792,8 +880,13 @@ pub struct _NV_ENC_PIC_PARAMS_HEVC {
     pub reserved: u32,
     pub seiPayloadArray: *mut NV_ENC_SEI_PAYLOAD,
     pub timeCode: NV_ENC_TIME_CODE,
-    pub reserved2: [u32; 237usize],
-    pub reserved3: [*mut ::core::ffi::c_void; 61usize],
+    pub numTemporalLayers: u32,
+    pub viewId: u32,
+    pub p3DReferenceDisplayInfo: *mut HEVC_3D_REFERENCE_DISPLAY_INFO,
+    pub pMaxCll: *mut CONTENT_LIGHT_LEVEL,
+    pub pMasteringDisplay: *mut MASTERING_DISPLAY_INFO,
+    pub reserved2: [u32; 234usize],
+    pub reserved3: [*mut ::core::ffi::c_void; 58usize],
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -806,14 +899,21 @@ pub struct _NV_ENC_PIC_PARAMS_AV1 {
     pub _bitfield_1: __BindgenBitfieldUnit<[u8; 4usize]>,
     pub numTileColumns: u32,
     pub numTileRows: u32,
+    pub reserved: u32,
     pub tileWidths: *mut u32,
     pub tileHeights: *mut u32,
     pub obuPayloadArrayCnt: u32,
-    pub reserved: u32,
+    pub reserved1: u32,
     pub obuPayloadArray: *mut NV_ENC_SEI_PAYLOAD,
     pub filmGrainParams: *mut NV_ENC_FILM_GRAIN_PARAMS_AV1,
-    pub reserved2: [u32; 247usize],
-    pub reserved3: [*mut ::core::ffi::c_void; 61usize],
+    pub ltrMarkFrameIdx: u32,
+    pub ltrUseFrameBitmap: u32,
+    pub numTemporalLayers: u32,
+    pub reserved4: u32,
+    pub pMaxCll: *mut CONTENT_LIGHT_LEVEL,
+    pub pMasteringDisplay: *mut MASTERING_DISPLAY_INFO,
+    pub reserved2: [u32; 242usize],
+    pub reserved3: [*mut ::core::ffi::c_void; 59usize],
 }
 #[repr(C)]
 #[derive(Copy, Clone)]
@@ -835,19 +935,20 @@ pub struct _NV_ENC_PIC_PARAMS {
     pub codecPicParams: NV_ENC_CODEC_PIC_PARAMS,
     pub meHintCountsPerBlock: [NVENC_EXTERNAL_ME_HINT_COUNTS_PER_BLOCKTYPE; 2usize],
     pub meExternalHints: *mut NVENC_EXTERNAL_ME_HINT,
-    pub reserved1: [u32; 6usize],
-    pub reserved2: [*mut ::core::ffi::c_void; 2usize],
+    pub reserved2: [u32; 7usize],
+    pub reserved5: [*mut ::core::ffi::c_void; 2usize],
     pub qpDeltaMap: *mut i8,
     pub qpDeltaMapSize: u32,
     pub reservedBitFields: u32,
     pub meHintRefPicDist: [u16; 2usize],
+    pub reserved4: u32,
     pub alphaBuffer: NV_ENC_INPUT_PTR,
     pub meExternalSbHints: *mut NVENC_EXTERNAL_ME_SB_HINT,
     pub meSbHintsCount: u32,
     pub stateBufferIdx: u32,
     pub outputReconBuffer: NV_ENC_OUTPUT_PTR,
     pub reserved3: [u32; 284usize],
-    pub reserved4: [*mut ::core::ffi::c_void; 57usize],
+    pub reserved6: [*mut ::core::ffi::c_void; 57usize],
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -855,16 +956,18 @@ pub struct _NV_ENC_MEONLY_PARAMS {
     pub version: u32,
     pub inputWidth: u32,
     pub inputHeight: u32,
+    pub reserved: u32,
     pub inputBuffer: NV_ENC_INPUT_PTR,
     pub referenceFrame: NV_ENC_INPUT_PTR,
     pub mvBuffer: NV_ENC_OUTPUT_PTR,
+    pub reserved2: u32,
     pub bufferFmt: NV_ENC_BUFFER_FORMAT,
     pub completionEvent: *mut ::core::ffi::c_void,
     pub viewID: u32,
     pub meHintCountsPerBlock: [NVENC_EXTERNAL_ME_HINT_COUNTS_PER_BLOCKTYPE; 2usize],
     pub meExternalHints: *mut NVENC_EXTERNAL_ME_HINT,
-    pub reserved1: [u32; 243usize],
-    pub reserved2: [*mut ::core::ffi::c_void; 59usize],
+    pub reserved1: [u32; 241usize],
+    pub reserved3: [*mut ::core::ffi::c_void; 59usize],
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -894,9 +997,10 @@ pub struct _NV_ENC_LOCK_BITSTREAM {
     pub averageMVY: i32,
     pub alphaLayerSizeInBytes: u32,
     pub outputStatsPtrSize: u32,
+    pub reserved: u32,
     pub outputStatsPtr: *mut ::core::ffi::c_void,
     pub frameIdxDisplay: u32,
-    pub reserved1: [u32; 220usize],
+    pub reserved1: [u32; 219usize],
     pub reserved2: [*mut ::core::ffi::c_void; 63usize],
     pub reservedInternal: [u32; 8usize],
 }
@@ -977,7 +1081,8 @@ pub struct _NV_ENC_REGISTER_RESOURCE {
     pub bufferUsage: NV_ENC_BUFFER_USAGE,
     pub pInputFencePoint: *mut NV_ENC_FENCE_POINT_D3D12,
     pub chromaOffset: [u32; 2usize],
-    pub reserved1: [u32; 245usize],
+    pub chromaOffsetIn: [u32; 2usize],
+    pub reserved1: [u32; 244usize],
     pub reserved2: [*mut ::core::ffi::c_void; 61usize],
 }
 #[repr(C)]
@@ -999,7 +1104,7 @@ pub struct _NV_ENC_STAT {
     pub interMBCount: u32,
     pub averageMVX: i32,
     pub averageMVY: i32,
-    pub reserved1: [u32; 226usize],
+    pub reserved1: [u32; 227usize],
     pub reserved2: [*mut ::core::ffi::c_void; 64usize],
 }
 #[repr(C)]
@@ -1020,7 +1125,7 @@ pub struct _NV_ENC_EVENT_PARAMS {
     pub version: u32,
     pub reserved: u32,
     pub completionEvent: *mut ::core::ffi::c_void,
-    pub reserved1: [u32; 253usize],
+    pub reserved1: [u32; 254usize],
     pub reserved2: [*mut ::core::ffi::c_void; 64usize],
 }
 #[repr(C)]
@@ -1041,8 +1146,8 @@ pub struct _NV_ENCODE_API_FUNCTION_LIST {
     pub reserved: u32,
     pub nvEncOpenEncodeSession: PNVENCOPENENCODESESSION,
     pub nvEncGetEncodeGUIDCount: PNVENCGETENCODEGUIDCOUNT,
-    pub nvEncGetEncodeProfileGUIDCount: PNVENCGETENCODEPRESETCOUNT,
-    pub nvEncGetEncodeProfileGUIDs: PNVENCGETENCODEPRESETGUIDS,
+    pub nvEncGetEncodeProfileGUIDCount: PNVENCGETENCODEPROFILEGUIDCOUNT,
+    pub nvEncGetEncodeProfileGUIDs: PNVENCGETENCODEPROFILEGUIDS,
     pub nvEncGetEncodeGUIDs: PNVENCGETENCODEGUIDS,
     pub nvEncGetInputFormatCount: PNVENCGETINPUTFORMATCOUNT,
     pub nvEncGetInputFormats: PNVENCGETINPUTFORMATS,
@@ -1084,9 +1189,9 @@ pub struct _NV_ENCODE_API_FUNCTION_LIST {
     pub nvEncLookaheadPicture: PNVENCLOOKAHEADPICTURE,
     pub reserved2: [*mut ::core::ffi::c_void; 275usize],
 }
-pub const NVENCAPI_MAJOR_VERSION: u32 = 12;
-pub const NVENCAPI_MINOR_VERSION: u32 = 1;
-pub const NVENCAPI_VERSION: u32 = 16777228;
+pub const NVENCAPI_MAJOR_VERSION: u32 = 13;
+pub const NVENCAPI_MINOR_VERSION: u32 = 0;
+pub const NVENCAPI_VERSION: u32 = 13;
 pub const NVENC_INFINITE_GOPLENGTH: u32 = 4294967295;
 pub const NV_MAX_SEQ_HDR_LEN: u32 = 512;
 pub const NV_MAX_TILE_COLS_AV1: u32 = 64;
@@ -1298,6 +1403,16 @@ fn bindgen_test_layout__NV_ENC_RESTORE_ENCODER_STATE_PARAMS() {
         )
     );
     assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved) as usize - ptr as usize },
+        12usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_RESTORE_ENCODER_STATE_PARAMS),
+            "::",
+            stringify!(reserved)
+        )
+    );
+    assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).outputBitstream) as usize - ptr as usize },
         16usize,
         concat!(
@@ -1394,8 +1509,18 @@ fn bindgen_test_layout__NV_ENC_OUTPUT_STATS_BLOCK() {
         )
     );
     assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
+        unsafe { ::core::ptr::addr_of!((*ptr).satdCost) as usize - ptr as usize },
         12usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_OUTPUT_STATS_BLOCK),
+            "::",
+            stringify!(satdCost)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
+        16usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_OUTPUT_STATS_BLOCK),
@@ -1460,8 +1585,18 @@ fn bindgen_test_layout__NV_ENC_OUTPUT_STATS_ROW() {
         )
     );
     assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
+        unsafe { ::core::ptr::addr_of!((*ptr).satdCost) as usize - ptr as usize },
         12usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_OUTPUT_STATS_ROW),
+            "::",
+            stringify!(satdCost)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
+        16usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_OUTPUT_STATS_ROW),
@@ -1523,7 +1658,7 @@ fn bindgen_test_layout__NV_ENC_LOOKAHEAD_PIC_PARAMS() {
     let ptr = UNINIT.as_ptr();
     assert_eq!(
         ::core::mem::size_of::<_NV_ENC_LOOKAHEAD_PIC_PARAMS>(),
-        792usize,
+        784usize,
         concat!("Size of: ", stringify!(_NV_ENC_LOOKAHEAD_PIC_PARAMS))
     );
     assert_eq!(
@@ -1539,6 +1674,16 @@ fn bindgen_test_layout__NV_ENC_LOOKAHEAD_PIC_PARAMS() {
             stringify!(_NV_ENC_LOOKAHEAD_PIC_PARAMS),
             "::",
             stringify!(version)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved) as usize - ptr as usize },
+        4usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_LOOKAHEAD_PIC_PARAMS),
+            "::",
+            stringify!(reserved)
         )
     );
     assert_eq!(
@@ -1562,23 +1707,23 @@ fn bindgen_test_layout__NV_ENC_LOOKAHEAD_PIC_PARAMS() {
         )
     );
     assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).reserved) as usize - ptr as usize },
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
         20usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_LOOKAHEAD_PIC_PARAMS),
             "::",
-            stringify!(reserved)
+            stringify!(reserved1)
         )
     );
     assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
-        280usize,
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved2) as usize - ptr as usize },
+        272usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_LOOKAHEAD_PIC_PARAMS),
             "::",
-            stringify!(reserved1)
+            stringify!(reserved2)
         )
     );
 }
@@ -1968,7 +2113,7 @@ fn bindgen_test_layout__NV_ENC_CREATE_MV_BUFFER() {
     let ptr = UNINIT.as_ptr();
     assert_eq!(
         ::core::mem::size_of::<_NV_ENC_CREATE_MV_BUFFER>(),
-        1544usize,
+        1536usize,
         concat!("Size of: ", stringify!(_NV_ENC_CREATE_MV_BUFFER))
     );
     assert_eq!(
@@ -1984,6 +2129,16 @@ fn bindgen_test_layout__NV_ENC_CREATE_MV_BUFFER() {
             stringify!(_NV_ENC_CREATE_MV_BUFFER),
             "::",
             stringify!(version)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved) as usize - ptr as usize },
+        4usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_CREATE_MV_BUFFER),
+            "::",
+            stringify!(reserved)
         )
     );
     assert_eq!(
@@ -2008,7 +2163,7 @@ fn bindgen_test_layout__NV_ENC_CREATE_MV_BUFFER() {
     );
     assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).reserved2) as usize - ptr as usize },
-        1040usize,
+        1032usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_CREATE_MV_BUFFER),
@@ -2327,13 +2482,43 @@ fn bindgen_test_layout__NV_ENC_RC_PARAMS() {
         )
     );
     assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).reserved) as usize - ptr as usize },
+        unsafe { ::core::ptr::addr_of!((*ptr).lookaheadLevel) as usize - ptr as usize },
         112usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_RC_PARAMS),
             "::",
-            stringify!(reserved)
+            stringify!(lookaheadLevel)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).viewBitrateRatios) as usize - ptr as usize },
+        116usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_RC_PARAMS),
+            "::",
+            stringify!(viewBitrateRatios)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved3) as usize - ptr as usize },
+        123usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_RC_PARAMS),
+            "::",
+            stringify!(reserved3)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
+        124usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_RC_PARAMS),
+            "::",
+            stringify!(reserved1)
         )
     );
 }
@@ -2369,7 +2554,7 @@ fn bindgen_test_layout__NV_ENC_TIME_CODE() {
     let ptr = UNINIT.as_ptr();
     assert_eq!(
         ::core::mem::size_of::<_NV_ENC_TIME_CODE>(),
-        28usize,
+        32usize,
         concat!("Size of: ", stringify!(_NV_ENC_TIME_CODE))
     );
     assert_eq!(
@@ -2395,6 +2580,301 @@ fn bindgen_test_layout__NV_ENC_TIME_CODE() {
             stringify!(_NV_ENC_TIME_CODE),
             "::",
             stringify!(clockTimestamp)
+        )
+    );
+    assert_eq!(
+        unsafe {
+            ::core::ptr::addr_of!((*ptr).skipClockTimestampInsertion) as usize - ptr as usize
+        },
+        28usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_TIME_CODE),
+            "::",
+            stringify!(skipClockTimestampInsertion)
+        )
+    );
+}
+#[test]
+fn bindgen_test_layout__HEVC_3D_REFERENCE_DISPLAY_INFO() {
+    const UNINIT: ::core::mem::MaybeUninit<_HEVC_3D_REFERENCE_DISPLAY_INFO> =
+        ::core::mem::MaybeUninit::uninit();
+    let ptr = UNINIT.as_ptr();
+    assert_eq!(
+        ::core::mem::size_of::<_HEVC_3D_REFERENCE_DISPLAY_INFO>(),
+        960usize,
+        concat!("Size of: ", stringify!(_HEVC_3D_REFERENCE_DISPLAY_INFO))
+    );
+    assert_eq!(
+        ::core::mem::align_of::<_HEVC_3D_REFERENCE_DISPLAY_INFO>(),
+        4usize,
+        concat!("Alignment of ", stringify!(_HEVC_3D_REFERENCE_DISPLAY_INFO))
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).precRefDisplayWidth) as usize - ptr as usize },
+        4usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_HEVC_3D_REFERENCE_DISPLAY_INFO),
+            "::",
+            stringify!(precRefDisplayWidth)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).precRefViewingDist) as usize - ptr as usize },
+        8usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_HEVC_3D_REFERENCE_DISPLAY_INFO),
+            "::",
+            stringify!(precRefViewingDist)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).numRefDisplaysMinus1) as usize - ptr as usize },
+        12usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_HEVC_3D_REFERENCE_DISPLAY_INFO),
+            "::",
+            stringify!(numRefDisplaysMinus1)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).leftViewId) as usize - ptr as usize },
+        16usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_HEVC_3D_REFERENCE_DISPLAY_INFO),
+            "::",
+            stringify!(leftViewId)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).rightViewId) as usize - ptr as usize },
+        144usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_HEVC_3D_REFERENCE_DISPLAY_INFO),
+            "::",
+            stringify!(rightViewId)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).exponentRefDisplayWidth) as usize - ptr as usize },
+        272usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_HEVC_3D_REFERENCE_DISPLAY_INFO),
+            "::",
+            stringify!(exponentRefDisplayWidth)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).mantissaRefDisplayWidth) as usize - ptr as usize },
+        400usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_HEVC_3D_REFERENCE_DISPLAY_INFO),
+            "::",
+            stringify!(mantissaRefDisplayWidth)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).exponentRefViewingDistance) as usize - ptr as usize },
+        528usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_HEVC_3D_REFERENCE_DISPLAY_INFO),
+            "::",
+            stringify!(exponentRefViewingDistance)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).mantissaRefViewingDistance) as usize - ptr as usize },
+        656usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_HEVC_3D_REFERENCE_DISPLAY_INFO),
+            "::",
+            stringify!(mantissaRefViewingDistance)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).numSampleShiftPlus512) as usize - ptr as usize },
+        784usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_HEVC_3D_REFERENCE_DISPLAY_INFO),
+            "::",
+            stringify!(numSampleShiftPlus512)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).additionalShiftPresentFlag) as usize - ptr as usize },
+        912usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_HEVC_3D_REFERENCE_DISPLAY_INFO),
+            "::",
+            stringify!(additionalShiftPresentFlag)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved2) as usize - ptr as usize },
+        944usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_HEVC_3D_REFERENCE_DISPLAY_INFO),
+            "::",
+            stringify!(reserved2)
+        )
+    );
+}
+#[test]
+fn bindgen_test_layout__CHROMA_POINTS() {
+    const UNINIT: ::core::mem::MaybeUninit<_CHROMA_POINTS> = ::core::mem::MaybeUninit::uninit();
+    let ptr = UNINIT.as_ptr();
+    assert_eq!(
+        ::core::mem::size_of::<_CHROMA_POINTS>(),
+        4usize,
+        concat!("Size of: ", stringify!(_CHROMA_POINTS))
+    );
+    assert_eq!(
+        ::core::mem::align_of::<_CHROMA_POINTS>(),
+        2usize,
+        concat!("Alignment of ", stringify!(_CHROMA_POINTS))
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).x) as usize - ptr as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_CHROMA_POINTS),
+            "::",
+            stringify!(x)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).y) as usize - ptr as usize },
+        2usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_CHROMA_POINTS),
+            "::",
+            stringify!(y)
+        )
+    );
+}
+#[test]
+fn bindgen_test_layout__MASTERING_DISPLAY_INFO() {
+    const UNINIT: ::core::mem::MaybeUninit<_MASTERING_DISPLAY_INFO> =
+        ::core::mem::MaybeUninit::uninit();
+    let ptr = UNINIT.as_ptr();
+    assert_eq!(
+        ::core::mem::size_of::<_MASTERING_DISPLAY_INFO>(),
+        24usize,
+        concat!("Size of: ", stringify!(_MASTERING_DISPLAY_INFO))
+    );
+    assert_eq!(
+        ::core::mem::align_of::<_MASTERING_DISPLAY_INFO>(),
+        4usize,
+        concat!("Alignment of ", stringify!(_MASTERING_DISPLAY_INFO))
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).g) as usize - ptr as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_MASTERING_DISPLAY_INFO),
+            "::",
+            stringify!(g)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).b) as usize - ptr as usize },
+        4usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_MASTERING_DISPLAY_INFO),
+            "::",
+            stringify!(b)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).r) as usize - ptr as usize },
+        8usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_MASTERING_DISPLAY_INFO),
+            "::",
+            stringify!(r)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).whitePoint) as usize - ptr as usize },
+        12usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_MASTERING_DISPLAY_INFO),
+            "::",
+            stringify!(whitePoint)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).maxLuma) as usize - ptr as usize },
+        16usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_MASTERING_DISPLAY_INFO),
+            "::",
+            stringify!(maxLuma)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).minLuma) as usize - ptr as usize },
+        20usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_MASTERING_DISPLAY_INFO),
+            "::",
+            stringify!(minLuma)
+        )
+    );
+}
+#[test]
+fn bindgen_test_layout__CONTENT_LIGHT_LEVEL() {
+    const UNINIT: ::core::mem::MaybeUninit<_CONTENT_LIGHT_LEVEL> =
+        ::core::mem::MaybeUninit::uninit();
+    let ptr = UNINIT.as_ptr();
+    assert_eq!(
+        ::core::mem::size_of::<_CONTENT_LIGHT_LEVEL>(),
+        4usize,
+        concat!("Size of: ", stringify!(_CONTENT_LIGHT_LEVEL))
+    );
+    assert_eq!(
+        ::core::mem::align_of::<_CONTENT_LIGHT_LEVEL>(),
+        2usize,
+        concat!("Alignment of ", stringify!(_CONTENT_LIGHT_LEVEL))
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).maxContentLightLevel) as usize - ptr as usize },
+        0usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_CONTENT_LIGHT_LEVEL),
+            "::",
+            stringify!(maxContentLightLevel)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).maxPicAverageLightLevel) as usize - ptr as usize },
+        2usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_CONTENT_LIGHT_LEVEL),
+            "::",
+            stringify!(maxPicAverageLightLevel)
         )
     );
 }
@@ -2913,8 +3393,38 @@ fn bindgen_test_layout__NV_ENC_CONFIG_H264() {
         )
     );
     assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
+        unsafe { ::core::ptr::addr_of!((*ptr).outputBitDepth) as usize - ptr as usize },
         212usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_CONFIG_H264),
+            "::",
+            stringify!(outputBitDepth)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).inputBitDepth) as usize - ptr as usize },
+        216usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_CONFIG_H264),
+            "::",
+            stringify!(inputBitDepth)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).tfLevel) as usize - ptr as usize },
+        220usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_CONFIG_H264),
+            "::",
+            stringify!(tfLevel)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
+        224usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_CONFIG_H264),
@@ -3149,8 +3659,68 @@ fn bindgen_test_layout__NV_ENC_CONFIG_HEVC() {
         )
     );
     assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
+        unsafe { ::core::ptr::addr_of!((*ptr).tfLevel) as usize - ptr as usize },
         192usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_CONFIG_HEVC),
+            "::",
+            stringify!(tfLevel)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).disableDeblockingFilterIDC) as usize - ptr as usize },
+        196usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_CONFIG_HEVC),
+            "::",
+            stringify!(disableDeblockingFilterIDC)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).outputBitDepth) as usize - ptr as usize },
+        200usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_CONFIG_HEVC),
+            "::",
+            stringify!(outputBitDepth)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).inputBitDepth) as usize - ptr as usize },
+        204usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_CONFIG_HEVC),
+            "::",
+            stringify!(inputBitDepth)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).numTemporalLayers) as usize - ptr as usize },
+        208usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_CONFIG_HEVC),
+            "::",
+            stringify!(numTemporalLayers)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).numViews) as usize - ptr as usize },
+        212usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_CONFIG_HEVC),
+            "::",
+            stringify!(numViews)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
+        216usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_CONFIG_HEVC),
@@ -3460,6 +4030,16 @@ fn bindgen_test_layout__NV_ENC_CONFIG_AV1() {
         )
     );
     assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved2) as usize - ptr as usize },
+        44usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_CONFIG_AV1),
+            "::",
+            stringify!(reserved2)
+        )
+    );
+    assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).tileWidths) as usize - ptr as usize },
         48usize,
         concat!(
@@ -3580,8 +4160,58 @@ fn bindgen_test_layout__NV_ENC_CONFIG_AV1() {
         )
     );
     assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
+        unsafe { ::core::ptr::addr_of!((*ptr).outputBitDepth) as usize - ptr as usize },
         112usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_CONFIG_AV1),
+            "::",
+            stringify!(outputBitDepth)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).inputBitDepth) as usize - ptr as usize },
+        116usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_CONFIG_AV1),
+            "::",
+            stringify!(inputBitDepth)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).ltrNumFrames) as usize - ptr as usize },
+        120usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_CONFIG_AV1),
+            "::",
+            stringify!(ltrNumFrames)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).numTemporalLayers) as usize - ptr as usize },
+        124usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_CONFIG_AV1),
+            "::",
+            stringify!(numTemporalLayers)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).tfLevel) as usize - ptr as usize },
+        128usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_CONFIG_AV1),
+            "::",
+            stringify!(tfLevel)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
+        132usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_CONFIG_AV1),
@@ -3590,13 +4220,13 @@ fn bindgen_test_layout__NV_ENC_CONFIG_AV1() {
         )
     );
     assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).reserved2) as usize - ptr as usize },
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved3) as usize - ptr as usize },
         1056usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_CONFIG_AV1),
             "::",
-            stringify!(reserved2)
+            stringify!(reserved3)
         )
     );
 }
@@ -3880,7 +4510,7 @@ fn bindgen_test_layout__NV_ENC_INITIALIZE_PARAMS() {
     let ptr = UNINIT.as_ptr();
     assert_eq!(
         ::core::mem::size_of::<_NV_ENC_INITIALIZE_PARAMS>(),
-        1808usize,
+        1800usize,
         concat!("Size of: ", stringify!(_NV_ENC_INITIALIZE_PARAMS))
     );
     assert_eq!(
@@ -4009,6 +4639,16 @@ fn bindgen_test_layout__NV_ENC_INITIALIZE_PARAMS() {
         )
     );
     assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved) as usize - ptr as usize },
+        76usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_INITIALIZE_PARAMS),
+            "::",
+            stringify!(reserved)
+        )
+    );
+    assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).privData) as usize - ptr as usize },
         80usize,
         concat!(
@@ -4099,18 +4739,18 @@ fn bindgen_test_layout__NV_ENC_INITIALIZE_PARAMS() {
         )
     );
     assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).reserved) as usize - ptr as usize },
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
         152usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_INITIALIZE_PARAMS),
             "::",
-            stringify!(reserved)
+            stringify!(reserved1)
         )
     );
     assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).reserved2) as usize - ptr as usize },
-        1296usize,
+        1288usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_INITIALIZE_PARAMS),
@@ -4126,7 +4766,7 @@ fn bindgen_test_layout__NV_ENC_RECONFIGURE_PARAMS() {
     let ptr = UNINIT.as_ptr();
     assert_eq!(
         ::core::mem::size_of::<_NV_ENC_RECONFIGURE_PARAMS>(),
-        1824usize,
+        1816usize,
         concat!("Size of: ", stringify!(_NV_ENC_RECONFIGURE_PARAMS))
     );
     assert_eq!(
@@ -4145,6 +4785,16 @@ fn bindgen_test_layout__NV_ENC_RECONFIGURE_PARAMS() {
         )
     );
     assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved) as usize - ptr as usize },
+        4usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_RECONFIGURE_PARAMS),
+            "::",
+            stringify!(reserved)
+        )
+    );
+    assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).reInitEncodeParams) as usize - ptr as usize },
         8usize,
         concat!(
@@ -4152,6 +4802,16 @@ fn bindgen_test_layout__NV_ENC_RECONFIGURE_PARAMS() {
             stringify!(_NV_ENC_RECONFIGURE_PARAMS),
             "::",
             stringify!(reInitEncodeParams)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved2) as usize - ptr as usize },
+        1812usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_RECONFIGURE_PARAMS),
+            "::",
+            stringify!(reserved2)
         )
     );
 }
@@ -4178,6 +4838,16 @@ fn bindgen_test_layout__NV_ENC_PRESET_CONFIG() {
             stringify!(_NV_ENC_PRESET_CONFIG),
             "::",
             stringify!(version)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved) as usize - ptr as usize },
+        4usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_PRESET_CONFIG),
+            "::",
+            stringify!(reserved)
         )
     );
     assert_eq!(
@@ -4568,7 +5238,7 @@ fn bindgen_test_layout__NV_ENC_PIC_PARAMS_H264() {
     );
     assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).reserved) as usize - ptr as usize },
-        236usize,
+        240usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_PIC_PARAMS_H264),
@@ -4642,6 +5312,16 @@ fn bindgen_test_layout__NV_ENC_PIC_PARAMS_HEVC() {
             stringify!(_NV_ENC_PIC_PARAMS_HEVC),
             "::",
             stringify!(forceIntraRefreshWithFrameCnt)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
+        20usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_PIC_PARAMS_HEVC),
+            "::",
+            stringify!(reserved1)
         )
     );
     assert_eq!(
@@ -4755,8 +5435,58 @@ fn bindgen_test_layout__NV_ENC_PIC_PARAMS_HEVC() {
         )
     );
     assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).numTemporalLayers) as usize - ptr as usize },
+        104usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_PIC_PARAMS_HEVC),
+            "::",
+            stringify!(numTemporalLayers)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).viewId) as usize - ptr as usize },
+        108usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_PIC_PARAMS_HEVC),
+            "::",
+            stringify!(viewId)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).p3DReferenceDisplayInfo) as usize - ptr as usize },
+        112usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_PIC_PARAMS_HEVC),
+            "::",
+            stringify!(p3DReferenceDisplayInfo)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).pMaxCll) as usize - ptr as usize },
+        120usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_PIC_PARAMS_HEVC),
+            "::",
+            stringify!(pMaxCll)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).pMasteringDisplay) as usize - ptr as usize },
+        128usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_PIC_PARAMS_HEVC),
+            "::",
+            stringify!(pMasteringDisplay)
+        )
+    );
+    assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).reserved2) as usize - ptr as usize },
-        100usize,
+        136usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_PIC_PARAMS_HEVC),
@@ -4766,7 +5496,7 @@ fn bindgen_test_layout__NV_ENC_PIC_PARAMS_HEVC() {
     );
     assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).reserved3) as usize - ptr as usize },
-        1048usize,
+        1072usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_PIC_PARAMS_HEVC),
@@ -4782,7 +5512,7 @@ fn bindgen_test_layout__NV_ENC_PIC_PARAMS_AV1() {
     let ptr = UNINIT.as_ptr();
     assert_eq!(
         ::core::mem::size_of::<_NV_ENC_PIC_PARAMS_AV1>(),
-        1552usize,
+        1544usize,
         concat!("Size of: ", stringify!(_NV_ENC_PIC_PARAMS_AV1))
     );
     assert_eq!(
@@ -4853,6 +5583,16 @@ fn bindgen_test_layout__NV_ENC_PIC_PARAMS_AV1() {
         )
     );
     assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved) as usize - ptr as usize },
+        28usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_PIC_PARAMS_AV1),
+            "::",
+            stringify!(reserved)
+        )
+    );
+    assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).tileWidths) as usize - ptr as usize },
         32usize,
         concat!(
@@ -4883,13 +5623,13 @@ fn bindgen_test_layout__NV_ENC_PIC_PARAMS_AV1() {
         )
     );
     assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).reserved) as usize - ptr as usize },
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
         52usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_PIC_PARAMS_AV1),
             "::",
-            stringify!(reserved)
+            stringify!(reserved1)
         )
     );
     assert_eq!(
@@ -4913,8 +5653,68 @@ fn bindgen_test_layout__NV_ENC_PIC_PARAMS_AV1() {
         )
     );
     assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).reserved2) as usize - ptr as usize },
+        unsafe { ::core::ptr::addr_of!((*ptr).ltrMarkFrameIdx) as usize - ptr as usize },
         72usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_PIC_PARAMS_AV1),
+            "::",
+            stringify!(ltrMarkFrameIdx)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).ltrUseFrameBitmap) as usize - ptr as usize },
+        76usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_PIC_PARAMS_AV1),
+            "::",
+            stringify!(ltrUseFrameBitmap)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).numTemporalLayers) as usize - ptr as usize },
+        80usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_PIC_PARAMS_AV1),
+            "::",
+            stringify!(numTemporalLayers)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved4) as usize - ptr as usize },
+        84usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_PIC_PARAMS_AV1),
+            "::",
+            stringify!(reserved4)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).pMaxCll) as usize - ptr as usize },
+        88usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_PIC_PARAMS_AV1),
+            "::",
+            stringify!(pMaxCll)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).pMasteringDisplay) as usize - ptr as usize },
+        96usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_PIC_PARAMS_AV1),
+            "::",
+            stringify!(pMasteringDisplay)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved2) as usize - ptr as usize },
+        104usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_PIC_PARAMS_AV1),
@@ -4924,7 +5724,7 @@ fn bindgen_test_layout__NV_ENC_PIC_PARAMS_AV1() {
     );
     assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).reserved3) as usize - ptr as usize },
-        1064usize,
+        1072usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_PIC_PARAMS_AV1),
@@ -4940,7 +5740,7 @@ fn bindgen_test_layout__NV_ENC_CODEC_PIC_PARAMS() {
     let ptr = UNINIT.as_ptr();
     assert_eq!(
         ::core::mem::size_of::<_NV_ENC_CODEC_PIC_PARAMS>(),
-        1552usize,
+        1544usize,
         concat!("Size of: ", stringify!(_NV_ENC_CODEC_PIC_PARAMS))
     );
     assert_eq!(
@@ -5155,7 +5955,7 @@ fn bindgen_test_layout__NV_ENC_PIC_PARAMS() {
     );
     assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).meHintCountsPerBlock) as usize - ptr as usize },
-        1632usize,
+        1624usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_PIC_PARAMS),
@@ -5165,7 +5965,7 @@ fn bindgen_test_layout__NV_ENC_PIC_PARAMS() {
     );
     assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).meExternalHints) as usize - ptr as usize },
-        1664usize,
+        1656usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_PIC_PARAMS),
@@ -5174,23 +5974,23 @@ fn bindgen_test_layout__NV_ENC_PIC_PARAMS() {
         )
     );
     assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
-        1672usize,
-        concat!(
-            "Offset of field: ",
-            stringify!(_NV_ENC_PIC_PARAMS),
-            "::",
-            stringify!(reserved1)
-        )
-    );
-    assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).reserved2) as usize - ptr as usize },
-        1696usize,
+        1664usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_PIC_PARAMS),
             "::",
             stringify!(reserved2)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved5) as usize - ptr as usize },
+        1696usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_PIC_PARAMS),
+            "::",
+            stringify!(reserved5)
         )
     );
     assert_eq!(
@@ -5231,6 +6031,16 @@ fn bindgen_test_layout__NV_ENC_PIC_PARAMS() {
             stringify!(_NV_ENC_PIC_PARAMS),
             "::",
             stringify!(meHintRefPicDist)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved4) as usize - ptr as usize },
+        1732usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_PIC_PARAMS),
+            "::",
+            stringify!(reserved4)
         )
     );
     assert_eq!(
@@ -5294,13 +6104,13 @@ fn bindgen_test_layout__NV_ENC_PIC_PARAMS() {
         )
     );
     assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).reserved4) as usize - ptr as usize },
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved6) as usize - ptr as usize },
         2904usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_PIC_PARAMS),
             "::",
-            stringify!(reserved4)
+            stringify!(reserved6)
         )
     );
 }
@@ -5311,7 +6121,7 @@ fn bindgen_test_layout__NV_ENC_MEONLY_PARAMS() {
     let ptr = UNINIT.as_ptr();
     assert_eq!(
         ::core::mem::size_of::<_NV_ENC_MEONLY_PARAMS>(),
-        1552usize,
+        1544usize,
         concat!("Size of: ", stringify!(_NV_ENC_MEONLY_PARAMS))
     );
     assert_eq!(
@@ -5350,6 +6160,16 @@ fn bindgen_test_layout__NV_ENC_MEONLY_PARAMS() {
         )
     );
     assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved) as usize - ptr as usize },
+        12usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_MEONLY_PARAMS),
+            "::",
+            stringify!(reserved)
+        )
+    );
+    assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).inputBuffer) as usize - ptr as usize },
         16usize,
         concat!(
@@ -5380,8 +6200,18 @@ fn bindgen_test_layout__NV_ENC_MEONLY_PARAMS() {
         )
     );
     assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).bufferFmt) as usize - ptr as usize },
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved2) as usize - ptr as usize },
         40usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_MEONLY_PARAMS),
+            "::",
+            stringify!(reserved2)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).bufferFmt) as usize - ptr as usize },
+        44usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_MEONLY_PARAMS),
@@ -5440,13 +6270,13 @@ fn bindgen_test_layout__NV_ENC_MEONLY_PARAMS() {
         )
     );
     assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).reserved2) as usize - ptr as usize },
-        1080usize,
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved3) as usize - ptr as usize },
+        1072usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_MEONLY_PARAMS),
             "::",
-            stringify!(reserved2)
+            stringify!(reserved3)
         )
     );
 }
@@ -5457,7 +6287,7 @@ fn bindgen_test_layout__NV_ENC_LOCK_BITSTREAM() {
     let ptr = UNINIT.as_ptr();
     assert_eq!(
         ::core::mem::size_of::<_NV_ENC_LOCK_BITSTREAM>(),
-        1552usize,
+        1544usize,
         concat!("Size of: ", stringify!(_NV_ENC_LOCK_BITSTREAM))
     );
     assert_eq!(
@@ -5696,6 +6526,16 @@ fn bindgen_test_layout__NV_ENC_LOCK_BITSTREAM() {
         )
     );
     assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved) as usize - ptr as usize },
+        116usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_LOCK_BITSTREAM),
+            "::",
+            stringify!(reserved)
+        )
+    );
+    assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).outputStatsPtr) as usize - ptr as usize },
         120usize,
         concat!(
@@ -5727,7 +6567,7 @@ fn bindgen_test_layout__NV_ENC_LOCK_BITSTREAM() {
     );
     assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).reserved2) as usize - ptr as usize },
-        1016usize,
+        1008usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_LOCK_BITSTREAM),
@@ -5737,7 +6577,7 @@ fn bindgen_test_layout__NV_ENC_LOCK_BITSTREAM() {
     );
     assert_eq!(
         unsafe { ::core::ptr::addr_of!((*ptr).reservedInternal) as usize - ptr as usize },
-        1520usize,
+        1512usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_LOCK_BITSTREAM),
@@ -6321,8 +7161,18 @@ fn bindgen_test_layout__NV_ENC_REGISTER_RESOURCE() {
         )
     );
     assert_eq!(
-        unsafe { ::core::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
+        unsafe { ::core::ptr::addr_of!((*ptr).chromaOffsetIn) as usize - ptr as usize },
         64usize,
+        concat!(
+            "Offset of field: ",
+            stringify!(_NV_ENC_REGISTER_RESOURCE),
+            "::",
+            stringify!(chromaOffsetIn)
+        )
+    );
+    assert_eq!(
+        unsafe { ::core::ptr::addr_of!((*ptr).reserved1) as usize - ptr as usize },
+        72usize,
         concat!(
             "Offset of field: ",
             stringify!(_NV_ENC_REGISTER_RESOURCE),
@@ -7334,6 +8184,7 @@ pub enum _NV_ENC_PIC_TYPE {
     NV_ENC_PIC_TYPE_SKIPPED = 5,
     NV_ENC_PIC_TYPE_INTRA_REFRESH = 6,
     NV_ENC_PIC_TYPE_NONREF_P = 7,
+    NV_ENC_PIC_TYPE_SWITCH = 8,
     NV_ENC_PIC_TYPE_UNKNOWN = 255,
 }
 #[repr(u32)]
@@ -7360,6 +8211,8 @@ pub enum _NV_ENC_BUFFER_FORMAT {
     NV_ENC_BUFFER_FORMAT_ABGR = 268435456,
     NV_ENC_BUFFER_FORMAT_ABGR10 = 536870912,
     NV_ENC_BUFFER_FORMAT_U8 = 1073741824,
+    NV_ENC_BUFFER_FORMAT_NV16 = 1073741825,
+    NV_ENC_BUFFER_FORMAT_P210 = 1073741826,
 }
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -7546,6 +8399,12 @@ pub enum _NV_ENC_NUM_REF_FRAMES {
 }
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub enum _NV_ENC_TEMPORAL_FILTER_LEVEL {
+    NV_ENC_TEMPORAL_FILTER_LEVEL_0 = 0,
+    NV_ENC_TEMPORAL_FILTER_LEVEL_4 = 4,
+}
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum _NV_ENC_CAPS {
     NV_ENC_CAPS_NUM_MAX_BFRAMES = 0,
     NV_ENC_CAPS_SUPPORTED_RATECONTROL_MODES = 1,
@@ -7602,7 +8461,12 @@ pub enum _NV_ENC_CAPS {
     NV_ENC_CAPS_OUTPUT_RECON_SURFACE = 52,
     NV_ENC_CAPS_OUTPUT_BLOCK_STATS = 53,
     NV_ENC_CAPS_OUTPUT_ROW_STATS = 54,
-    NV_ENC_CAPS_EXPOSED_COUNT = 55,
+    NV_ENC_CAPS_SUPPORT_TEMPORAL_FILTER = 55,
+    NV_ENC_CAPS_SUPPORT_LOOKAHEAD_LEVEL = 56,
+    NV_ENC_CAPS_SUPPORT_UNIDIRECTIONAL_B = 57,
+    NV_ENC_CAPS_SUPPORT_MVHEVC_ENCODE = 58,
+    NV_ENC_CAPS_SUPPORT_YUV422_ENCODE = 59,
+    NV_ENC_CAPS_EXPOSED_COUNT = 60,
 }
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -7692,13 +8556,30 @@ pub enum _NV_ENC_VUI_MATRIX_COEFFS {
 }
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub enum _NV_ENC_LOOKAHEAD_LEVEL {
+    NV_ENC_LOOKAHEAD_LEVEL_0 = 0,
+    NV_ENC_LOOKAHEAD_LEVEL_1 = 1,
+    NV_ENC_LOOKAHEAD_LEVEL_2 = 2,
+    NV_ENC_LOOKAHEAD_LEVEL_3 = 3,
+    NV_ENC_LOOKAHEAD_LEVEL_AUTOSELECT = 15,
+}
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
+pub enum _NV_ENC_BIT_DEPTH {
+    NV_ENC_BIT_DEPTH_INVALID = 0,
+    NV_ENC_BIT_DEPTH_8 = 8,
+    NV_ENC_BIT_DEPTH_10 = 10,
+}
+#[repr(u32)]
+#[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
 pub enum NV_ENC_TUNING_INFO {
     NV_ENC_TUNING_INFO_UNDEFINED = 0,
     NV_ENC_TUNING_INFO_HIGH_QUALITY = 1,
     NV_ENC_TUNING_INFO_LOW_LATENCY = 2,
     NV_ENC_TUNING_INFO_ULTRA_LOW_LATENCY = 3,
     NV_ENC_TUNING_INFO_LOSSLESS = 4,
-    NV_ENC_TUNING_INFO_COUNT = 5,
+    NV_ENC_TUNING_INFO_ULTRA_HIGH_QUALITY = 5,
+    NV_ENC_TUNING_INFO_COUNT = 6,
 }
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, Hash, PartialOrd, Ord, PartialEq, Eq)]
@@ -7707,6 +8588,7 @@ pub enum _NV_ENC_SPLIT_ENCODE_MODE {
     NV_ENC_SPLIT_AUTO_FORCED_MODE = 1,
     NV_ENC_SPLIT_TWO_FORCED_MODE = 2,
     NV_ENC_SPLIT_THREE_FORCED_MODE = 3,
+    NV_ENC_SPLIT_FOUR_FORCED_MODE = 4,
     NV_ENC_SPLIT_DISABLE_MODE = 15,
 }
 #[repr(C)]
@@ -8365,6 +9247,70 @@ impl Default for _NV_ENC_TIME_CODE {
             ::core::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
             s.assume_init()
         }
+    }
+}
+impl _HEVC_3D_REFERENCE_DISPLAY_INFO {
+    #[inline]
+    pub fn refViewingDistanceFlag(&self) -> u32 {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(0usize, 1u8) as u32) }
+    }
+
+    #[inline]
+    pub fn set_refViewingDistanceFlag(&mut self, val: u32) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            self._bitfield_1.set(0usize, 1u8, val as u64)
+        }
+    }
+
+    #[inline]
+    pub fn threeDimensionalReferenceDisplaysExtensionFlag(&self) -> u32 {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(1usize, 1u8) as u32) }
+    }
+
+    #[inline]
+    pub fn set_threeDimensionalReferenceDisplaysExtensionFlag(&mut self, val: u32) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            self._bitfield_1.set(1usize, 1u8, val as u64)
+        }
+    }
+
+    #[inline]
+    pub fn reserved(&self) -> u32 {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(2usize, 30u8) as u32) }
+    }
+
+    #[inline]
+    pub fn set_reserved(&mut self, val: u32) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            self._bitfield_1.set(2usize, 30u8, val as u64)
+        }
+    }
+
+    #[inline]
+    pub fn new_bitfield_1(
+        refViewingDistanceFlag: u32,
+        threeDimensionalReferenceDisplaysExtensionFlag: u32,
+        reserved: u32,
+    ) -> __BindgenBitfieldUnit<[u8; 4usize]> {
+        let mut __bindgen_bitfield_unit: __BindgenBitfieldUnit<[u8; 4usize]> = Default::default();
+        __bindgen_bitfield_unit.set(0usize, 1u8, {
+            let refViewingDistanceFlag: u32 =
+                unsafe { ::core::mem::transmute(refViewingDistanceFlag) };
+            refViewingDistanceFlag as u64
+        });
+        __bindgen_bitfield_unit.set(1usize, 1u8, {
+            let threeDimensionalReferenceDisplaysExtensionFlag: u32 =
+                unsafe { ::core::mem::transmute(threeDimensionalReferenceDisplaysExtensionFlag) };
+            threeDimensionalReferenceDisplaysExtensionFlag as u64
+        });
+        __bindgen_bitfield_unit.set(2usize, 30u8, {
+            let reserved: u32 = unsafe { ::core::mem::transmute(reserved) };
+            reserved as u64
+        });
+        __bindgen_bitfield_unit
     }
 }
 impl Default for _NV_ENC_CONFIG_H264_VUI_PARAMETERS {
@@ -9450,12 +10396,12 @@ impl _NV_ENC_CONFIG_HEVC {
     }
 
     #[inline]
-    pub fn pixelBitDepthMinus8(&self) -> u32 {
+    pub fn reserved3(&self) -> u32 {
         unsafe { ::core::mem::transmute(self._bitfield_1.get(11usize, 3u8) as u32) }
     }
 
     #[inline]
-    pub fn set_pixelBitDepthMinus8(&mut self, val: u32) {
+    pub fn set_reserved3(&mut self, val: u32) {
         unsafe {
             let val: u32 = ::core::mem::transmute(val);
             self._bitfield_1.set(11usize, 3u8, val as u64)
@@ -9541,15 +10487,80 @@ impl _NV_ENC_CONFIG_HEVC {
     }
 
     #[inline]
+    pub fn enableTemporalSVC(&self) -> u32 {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(20usize, 1u8) as u32) }
+    }
+
+    #[inline]
+    pub fn set_enableTemporalSVC(&mut self, val: u32) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            self._bitfield_1.set(20usize, 1u8, val as u64)
+        }
+    }
+
+    #[inline]
+    pub fn enableMVHEVC(&self) -> u32 {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(21usize, 1u8) as u32) }
+    }
+
+    #[inline]
+    pub fn set_enableMVHEVC(&mut self, val: u32) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            self._bitfield_1.set(21usize, 1u8, val as u64)
+        }
+    }
+
+    #[inline]
+    pub fn outputHevc3DReferenceDisplayInfo(&self) -> u32 {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(22usize, 1u8) as u32) }
+    }
+
+    #[inline]
+    pub fn set_outputHevc3DReferenceDisplayInfo(&mut self, val: u32) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            self._bitfield_1.set(22usize, 1u8, val as u64)
+        }
+    }
+
+    #[inline]
+    pub fn outputMaxCll(&self) -> u32 {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(23usize, 1u8) as u32) }
+    }
+
+    #[inline]
+    pub fn set_outputMaxCll(&mut self, val: u32) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            self._bitfield_1.set(23usize, 1u8, val as u64)
+        }
+    }
+
+    #[inline]
+    pub fn outputMasteringDisplay(&self) -> u32 {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(24usize, 1u8) as u32) }
+    }
+
+    #[inline]
+    pub fn set_outputMasteringDisplay(&mut self, val: u32) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            self._bitfield_1.set(24usize, 1u8, val as u64)
+        }
+    }
+
+    #[inline]
     pub fn reserved(&self) -> u32 {
-        unsafe { ::core::mem::transmute(self._bitfield_1.get(20usize, 12u8) as u32) }
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(25usize, 7u8) as u32) }
     }
 
     #[inline]
     pub fn set_reserved(&mut self, val: u32) {
         unsafe {
             let val: u32 = ::core::mem::transmute(val);
-            self._bitfield_1.set(20usize, 12u8, val as u64)
+            self._bitfield_1.set(25usize, 7u8, val as u64)
         }
     }
 
@@ -9565,13 +10576,18 @@ impl _NV_ENC_CONFIG_HEVC {
         repeatSPSPPS: u32,
         enableIntraRefresh: u32,
         chromaFormatIDC: u32,
-        pixelBitDepthMinus8: u32,
+        reserved3: u32,
         enableFillerDataInsertion: u32,
         enableConstrainedEncoding: u32,
         enableAlphaLayerEncoding: u32,
         singleSliceIntraRefresh: u32,
         outputRecoveryPointSEI: u32,
         outputTimeCodeSEI: u32,
+        enableTemporalSVC: u32,
+        enableMVHEVC: u32,
+        outputHevc3DReferenceDisplayInfo: u32,
+        outputMaxCll: u32,
+        outputMasteringDisplay: u32,
         reserved: u32,
     ) -> __BindgenBitfieldUnit<[u8; 4usize]> {
         let mut __bindgen_bitfield_unit: __BindgenBitfieldUnit<[u8; 4usize]> = Default::default();
@@ -9620,8 +10636,8 @@ impl _NV_ENC_CONFIG_HEVC {
             chromaFormatIDC as u64
         });
         __bindgen_bitfield_unit.set(11usize, 3u8, {
-            let pixelBitDepthMinus8: u32 = unsafe { ::core::mem::transmute(pixelBitDepthMinus8) };
-            pixelBitDepthMinus8 as u64
+            let reserved3: u32 = unsafe { ::core::mem::transmute(reserved3) };
+            reserved3 as u64
         });
         __bindgen_bitfield_unit.set(14usize, 1u8, {
             let enableFillerDataInsertion: u32 =
@@ -9652,7 +10668,29 @@ impl _NV_ENC_CONFIG_HEVC {
             let outputTimeCodeSEI: u32 = unsafe { ::core::mem::transmute(outputTimeCodeSEI) };
             outputTimeCodeSEI as u64
         });
-        __bindgen_bitfield_unit.set(20usize, 12u8, {
+        __bindgen_bitfield_unit.set(20usize, 1u8, {
+            let enableTemporalSVC: u32 = unsafe { ::core::mem::transmute(enableTemporalSVC) };
+            enableTemporalSVC as u64
+        });
+        __bindgen_bitfield_unit.set(21usize, 1u8, {
+            let enableMVHEVC: u32 = unsafe { ::core::mem::transmute(enableMVHEVC) };
+            enableMVHEVC as u64
+        });
+        __bindgen_bitfield_unit.set(22usize, 1u8, {
+            let outputHevc3DReferenceDisplayInfo: u32 =
+                unsafe { ::core::mem::transmute(outputHevc3DReferenceDisplayInfo) };
+            outputHevc3DReferenceDisplayInfo as u64
+        });
+        __bindgen_bitfield_unit.set(23usize, 1u8, {
+            let outputMaxCll: u32 = unsafe { ::core::mem::transmute(outputMaxCll) };
+            outputMaxCll as u64
+        });
+        __bindgen_bitfield_unit.set(24usize, 1u8, {
+            let outputMasteringDisplay: u32 =
+                unsafe { ::core::mem::transmute(outputMasteringDisplay) };
+            outputMasteringDisplay as u64
+        });
+        __bindgen_bitfield_unit.set(25usize, 7u8, {
             let reserved: u32 = unsafe { ::core::mem::transmute(reserved) };
             reserved as u64
         });
@@ -10039,28 +11077,67 @@ impl _NV_ENC_CONFIG_AV1 {
     }
 
     #[inline]
-    pub fn inputPixelBitDepthMinus8(&self) -> u32 {
-        unsafe { ::core::mem::transmute(self._bitfield_1.get(12usize, 3u8) as u32) }
+    pub fn enableLTR(&self) -> u32 {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(12usize, 1u8) as u32) }
     }
 
     #[inline]
-    pub fn set_inputPixelBitDepthMinus8(&mut self, val: u32) {
+    pub fn set_enableLTR(&mut self, val: u32) {
         unsafe {
             let val: u32 = ::core::mem::transmute(val);
-            self._bitfield_1.set(12usize, 3u8, val as u64)
+            self._bitfield_1.set(12usize, 1u8, val as u64)
         }
     }
 
     #[inline]
-    pub fn pixelBitDepthMinus8(&self) -> u32 {
-        unsafe { ::core::mem::transmute(self._bitfield_1.get(15usize, 3u8) as u32) }
+    pub fn enableTemporalSVC(&self) -> u32 {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(13usize, 1u8) as u32) }
     }
 
     #[inline]
-    pub fn set_pixelBitDepthMinus8(&mut self, val: u32) {
+    pub fn set_enableTemporalSVC(&mut self, val: u32) {
         unsafe {
             let val: u32 = ::core::mem::transmute(val);
-            self._bitfield_1.set(15usize, 3u8, val as u64)
+            self._bitfield_1.set(13usize, 1u8, val as u64)
+        }
+    }
+
+    #[inline]
+    pub fn outputMaxCll(&self) -> u32 {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(14usize, 1u8) as u32) }
+    }
+
+    #[inline]
+    pub fn set_outputMaxCll(&mut self, val: u32) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            self._bitfield_1.set(14usize, 1u8, val as u64)
+        }
+    }
+
+    #[inline]
+    pub fn outputMasteringDisplay(&self) -> u32 {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(15usize, 1u8) as u32) }
+    }
+
+    #[inline]
+    pub fn set_outputMasteringDisplay(&mut self, val: u32) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            self._bitfield_1.set(15usize, 1u8, val as u64)
+        }
+    }
+
+    #[inline]
+    pub fn reserved4(&self) -> u32 {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(16usize, 2u8) as u32) }
+    }
+
+    #[inline]
+    pub fn set_reserved4(&mut self, val: u32) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            self._bitfield_1.set(16usize, 2u8, val as u64)
         }
     }
 
@@ -10090,8 +11167,11 @@ impl _NV_ENC_CONFIG_AV1 {
         enableBitstreamPadding: u32,
         enableCustomTileConfig: u32,
         enableFilmGrainParams: u32,
-        inputPixelBitDepthMinus8: u32,
-        pixelBitDepthMinus8: u32,
+        enableLTR: u32,
+        enableTemporalSVC: u32,
+        outputMaxCll: u32,
+        outputMasteringDisplay: u32,
+        reserved4: u32,
         reserved: u32,
     ) -> __BindgenBitfieldUnit<[u8; 4usize]> {
         let mut __bindgen_bitfield_unit: __BindgenBitfieldUnit<[u8; 4usize]> = Default::default();
@@ -10143,14 +11223,26 @@ impl _NV_ENC_CONFIG_AV1 {
                 unsafe { ::core::mem::transmute(enableFilmGrainParams) };
             enableFilmGrainParams as u64
         });
-        __bindgen_bitfield_unit.set(12usize, 3u8, {
-            let inputPixelBitDepthMinus8: u32 =
-                unsafe { ::core::mem::transmute(inputPixelBitDepthMinus8) };
-            inputPixelBitDepthMinus8 as u64
+        __bindgen_bitfield_unit.set(12usize, 1u8, {
+            let enableLTR: u32 = unsafe { ::core::mem::transmute(enableLTR) };
+            enableLTR as u64
         });
-        __bindgen_bitfield_unit.set(15usize, 3u8, {
-            let pixelBitDepthMinus8: u32 = unsafe { ::core::mem::transmute(pixelBitDepthMinus8) };
-            pixelBitDepthMinus8 as u64
+        __bindgen_bitfield_unit.set(13usize, 1u8, {
+            let enableTemporalSVC: u32 = unsafe { ::core::mem::transmute(enableTemporalSVC) };
+            enableTemporalSVC as u64
+        });
+        __bindgen_bitfield_unit.set(14usize, 1u8, {
+            let outputMaxCll: u32 = unsafe { ::core::mem::transmute(outputMaxCll) };
+            outputMaxCll as u64
+        });
+        __bindgen_bitfield_unit.set(15usize, 1u8, {
+            let outputMasteringDisplay: u32 =
+                unsafe { ::core::mem::transmute(outputMasteringDisplay) };
+            outputMasteringDisplay as u64
+        });
+        __bindgen_bitfield_unit.set(16usize, 2u8, {
+            let reserved4: u32 = unsafe { ::core::mem::transmute(reserved4) };
+            reserved4 as u64
         });
         __bindgen_bitfield_unit.set(18usize, 14u8, {
             let reserved: u32 = unsafe { ::core::mem::transmute(reserved) };
@@ -10458,15 +11550,28 @@ impl _NV_ENC_INITIALIZE_PARAMS {
     }
 
     #[inline]
+    pub fn enableUniDirectionalB(&self) -> u32 {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(12usize, 1u8) as u32) }
+    }
+
+    #[inline]
+    pub fn set_enableUniDirectionalB(&mut self, val: u32) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            self._bitfield_1.set(12usize, 1u8, val as u64)
+        }
+    }
+
+    #[inline]
     pub fn reservedBitFields(&self) -> u32 {
-        unsafe { ::core::mem::transmute(self._bitfield_1.get(12usize, 20u8) as u32) }
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(13usize, 19u8) as u32) }
     }
 
     #[inline]
     pub fn set_reservedBitFields(&mut self, val: u32) {
         unsafe {
             let val: u32 = ::core::mem::transmute(val);
-            self._bitfield_1.set(12usize, 20u8, val as u64)
+            self._bitfield_1.set(13usize, 19u8, val as u64)
         }
     }
 
@@ -10481,6 +11586,7 @@ impl _NV_ENC_INITIALIZE_PARAMS {
         enableOutputInVidmem: u32,
         enableReconFrameOutput: u32,
         enableOutputStats: u32,
+        enableUniDirectionalB: u32,
         reservedBitFields: u32,
     ) -> __BindgenBitfieldUnit<[u8; 4usize]> {
         let mut __bindgen_bitfield_unit: __BindgenBitfieldUnit<[u8; 4usize]> = Default::default();
@@ -10523,7 +11629,12 @@ impl _NV_ENC_INITIALIZE_PARAMS {
             let enableOutputStats: u32 = unsafe { ::core::mem::transmute(enableOutputStats) };
             enableOutputStats as u64
         });
-        __bindgen_bitfield_unit.set(12usize, 20u8, {
+        __bindgen_bitfield_unit.set(12usize, 1u8, {
+            let enableUniDirectionalB: u32 =
+                unsafe { ::core::mem::transmute(enableUniDirectionalB) };
+            enableUniDirectionalB as u64
+        });
+        __bindgen_bitfield_unit.set(13usize, 19u8, {
             let reservedBitFields: u32 = unsafe { ::core::mem::transmute(reservedBitFields) };
             reservedBitFields as u64
         });
@@ -10567,12 +11678,12 @@ impl _NV_ENC_RECONFIGURE_PARAMS {
     }
 
     #[inline]
-    pub fn reserved(&self) -> u32 {
+    pub fn reserved1(&self) -> u32 {
         unsafe { ::core::mem::transmute(self._bitfield_1.get(2usize, 30u8) as u32) }
     }
 
     #[inline]
-    pub fn set_reserved(&mut self, val: u32) {
+    pub fn set_reserved1(&mut self, val: u32) {
         unsafe {
             let val: u32 = ::core::mem::transmute(val);
             self._bitfield_1.set(2usize, 30u8, val as u64)
@@ -10583,7 +11694,7 @@ impl _NV_ENC_RECONFIGURE_PARAMS {
     pub fn new_bitfield_1(
         resetEncoder: u32,
         forceIDR: u32,
-        reserved: u32,
+        reserved1: u32,
     ) -> __BindgenBitfieldUnit<[u8; 4usize]> {
         let mut __bindgen_bitfield_unit: __BindgenBitfieldUnit<[u8; 4usize]> = Default::default();
         __bindgen_bitfield_unit.set(0usize, 1u8, {
@@ -10595,8 +11706,8 @@ impl _NV_ENC_RECONFIGURE_PARAMS {
             forceIDR as u64
         });
         __bindgen_bitfield_unit.set(2usize, 30u8, {
-            let reserved: u32 = unsafe { ::core::mem::transmute(reserved) };
-            reserved as u64
+            let reserved1: u32 = unsafe { ::core::mem::transmute(reserved1) };
+            reserved1 as u64
         });
         __bindgen_bitfield_unit
     }
@@ -10807,15 +11918,28 @@ impl _NV_ENC_PIC_PARAMS_HEVC {
     }
 
     #[inline]
+    pub fn temporalConfigUpdate(&self) -> u32 {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(4usize, 1u8) as u32) }
+    }
+
+    #[inline]
+    pub fn set_temporalConfigUpdate(&mut self, val: u32) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            self._bitfield_1.set(4usize, 1u8, val as u64)
+        }
+    }
+
+    #[inline]
     pub fn reservedBitFields(&self) -> u32 {
-        unsafe { ::core::mem::transmute(self._bitfield_1.get(4usize, 28u8) as u32) }
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(5usize, 27u8) as u32) }
     }
 
     #[inline]
     pub fn set_reservedBitFields(&mut self, val: u32) {
         unsafe {
             let val: u32 = ::core::mem::transmute(val);
-            self._bitfield_1.set(4usize, 28u8, val as u64)
+            self._bitfield_1.set(5usize, 27u8, val as u64)
         }
     }
 
@@ -10825,6 +11949,7 @@ impl _NV_ENC_PIC_PARAMS_HEVC {
         sliceModeDataUpdate: u32,
         ltrMarkFrame: u32,
         ltrUseFrames: u32,
+        temporalConfigUpdate: u32,
         reservedBitFields: u32,
     ) -> __BindgenBitfieldUnit<[u8; 4usize]> {
         let mut __bindgen_bitfield_unit: __BindgenBitfieldUnit<[u8; 4usize]> = Default::default();
@@ -10844,7 +11969,11 @@ impl _NV_ENC_PIC_PARAMS_HEVC {
             let ltrUseFrames: u32 = unsafe { ::core::mem::transmute(ltrUseFrames) };
             ltrUseFrames as u64
         });
-        __bindgen_bitfield_unit.set(4usize, 28u8, {
+        __bindgen_bitfield_unit.set(4usize, 1u8, {
+            let temporalConfigUpdate: u32 = unsafe { ::core::mem::transmute(temporalConfigUpdate) };
+            temporalConfigUpdate as u64
+        });
+        __bindgen_bitfield_unit.set(5usize, 27u8, {
             let reservedBitFields: u32 = unsafe { ::core::mem::transmute(reservedBitFields) };
             reservedBitFields as u64
         });
@@ -10992,15 +12121,54 @@ impl _NV_ENC_PIC_PARAMS_AV1 {
     }
 
     #[inline]
+    pub fn ltrMarkFrame(&self) -> u32 {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(10usize, 1u8) as u32) }
+    }
+
+    #[inline]
+    pub fn set_ltrMarkFrame(&mut self, val: u32) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            self._bitfield_1.set(10usize, 1u8, val as u64)
+        }
+    }
+
+    #[inline]
+    pub fn ltrUseFrames(&self) -> u32 {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(11usize, 1u8) as u32) }
+    }
+
+    #[inline]
+    pub fn set_ltrUseFrames(&mut self, val: u32) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            self._bitfield_1.set(11usize, 1u8, val as u64)
+        }
+    }
+
+    #[inline]
+    pub fn temporalConfigUpdate(&self) -> u32 {
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(12usize, 1u8) as u32) }
+    }
+
+    #[inline]
+    pub fn set_temporalConfigUpdate(&mut self, val: u32) {
+        unsafe {
+            let val: u32 = ::core::mem::transmute(val);
+            self._bitfield_1.set(12usize, 1u8, val as u64)
+        }
+    }
+
+    #[inline]
     pub fn reservedBitFields(&self) -> u32 {
-        unsafe { ::core::mem::transmute(self._bitfield_1.get(10usize, 22u8) as u32) }
+        unsafe { ::core::mem::transmute(self._bitfield_1.get(13usize, 19u8) as u32) }
     }
 
     #[inline]
     pub fn set_reservedBitFields(&mut self, val: u32) {
         unsafe {
             let val: u32 = ::core::mem::transmute(val);
-            self._bitfield_1.set(10usize, 22u8, val as u64)
+            self._bitfield_1.set(13usize, 19u8, val as u64)
         }
     }
 
@@ -11016,6 +12184,9 @@ impl _NV_ENC_PIC_PARAMS_AV1 {
         tileConfigUpdate: u32,
         enableCustomTileConfig: u32,
         filmGrainParamsUpdate: u32,
+        ltrMarkFrame: u32,
+        ltrUseFrames: u32,
+        temporalConfigUpdate: u32,
         reservedBitFields: u32,
     ) -> __BindgenBitfieldUnit<[u8; 4usize]> {
         let mut __bindgen_bitfield_unit: __BindgenBitfieldUnit<[u8; 4usize]> = Default::default();
@@ -11063,7 +12234,19 @@ impl _NV_ENC_PIC_PARAMS_AV1 {
                 unsafe { ::core::mem::transmute(filmGrainParamsUpdate) };
             filmGrainParamsUpdate as u64
         });
-        __bindgen_bitfield_unit.set(10usize, 22u8, {
+        __bindgen_bitfield_unit.set(10usize, 1u8, {
+            let ltrMarkFrame: u32 = unsafe { ::core::mem::transmute(ltrMarkFrame) };
+            ltrMarkFrame as u64
+        });
+        __bindgen_bitfield_unit.set(11usize, 1u8, {
+            let ltrUseFrames: u32 = unsafe { ::core::mem::transmute(ltrUseFrames) };
+            ltrUseFrames as u64
+        });
+        __bindgen_bitfield_unit.set(12usize, 1u8, {
+            let temporalConfigUpdate: u32 = unsafe { ::core::mem::transmute(temporalConfigUpdate) };
+            temporalConfigUpdate as u64
+        });
+        __bindgen_bitfield_unit.set(13usize, 19u8, {
             let reservedBitFields: u32 = unsafe { ::core::mem::transmute(reservedBitFields) };
             reservedBitFields as u64
         });
@@ -11439,6 +12622,7 @@ pub use self::{
     _NVENCSTATUS as NVENCSTATUS,
     _NV_ENC_AV1_PART_SIZE as NV_ENC_AV1_PART_SIZE,
     _NV_ENC_BFRAME_REF_MODE as NV_ENC_BFRAME_REF_MODE,
+    _NV_ENC_BIT_DEPTH as NV_ENC_BIT_DEPTH,
     _NV_ENC_BUFFER_FORMAT as NV_ENC_BUFFER_FORMAT,
     _NV_ENC_BUFFER_USAGE as NV_ENC_BUFFER_USAGE,
     _NV_ENC_CAPS as NV_ENC_CAPS,
@@ -11452,6 +12636,7 @@ pub use self::{
     _NV_ENC_HEVC_CUSIZE as NV_ENC_HEVC_CUSIZE,
     _NV_ENC_INPUT_RESOURCE_TYPE as NV_ENC_INPUT_RESOURCE_TYPE,
     _NV_ENC_LEVEL as NV_ENC_LEVEL,
+    _NV_ENC_LOOKAHEAD_LEVEL as NV_ENC_LOOKAHEAD_LEVEL,
     _NV_ENC_MEMORY_HEAP as NV_ENC_MEMORY_HEAP,
     _NV_ENC_MULTI_PASS as NV_ENC_MULTI_PASS,
     _NV_ENC_MV_PRECISION as NV_ENC_MV_PRECISION,
@@ -11466,6 +12651,7 @@ pub use self::{
     _NV_ENC_SPLIT_ENCODE_MODE as NV_ENC_SPLIT_ENCODE_MODE,
     _NV_ENC_STATE_RESTORE_TYPE as NV_ENC_STATE_RESTORE_TYPE,
     _NV_ENC_STEREO_PACKING_MODE as NV_ENC_STEREO_PACKING_MODE,
+    _NV_ENC_TEMPORAL_FILTER_LEVEL as NV_ENC_TEMPORAL_FILTER_LEVEL,
     _NV_ENC_VUI_COLOR_PRIMARIES as NV_ENC_VUI_COLOR_PRIMARIES,
     _NV_ENC_VUI_MATRIX_COEFFS as NV_ENC_VUI_MATRIX_COEFFS,
     _NV_ENC_VUI_TRANSFER_CHARACTERISTIC as NV_ENC_VUI_TRANSFER_CHARACTERISTIC,

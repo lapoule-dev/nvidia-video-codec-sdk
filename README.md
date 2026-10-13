@@ -9,8 +9,13 @@ The documentation is also hosted on GitHub Pages
 [here](https://viliamvadocz.github.io/nvidia-video-codec-sdk/nvidia_video_codec_sdk/).
 
 Versions:
-- NVIDIA Video Codec SDK 12.1.14
+- NVIDIA Video Codec SDK 13.0 (encode API, `nvEncodeAPI.h` from nv-codec-headers `n13.0.19.0`);
+  decode bindings (`cuviddec`, `nvcuvid`) are still from SDK 12.1.14
 - CUDA 12.2 (older CUDA versions should also work)
+- Requires an NVIDIA driver that supports NVENC API 13.0 (R570 or later)
+
+This fork targets Linux only: the Windows bindings have not been regenerated
+for SDK 13.0, so building for Windows is a compile error.
 
 ## Installation
 

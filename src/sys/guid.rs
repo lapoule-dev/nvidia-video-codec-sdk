@@ -76,6 +76,24 @@ pub const NV_ENC_H264_PROFILE_HIGH_GUID: GUID = GUID {
     Data4: [0xaf, 0x2a, 0xd5, 0x37, 0xc9, 0x2b, 0xe3, 0x10],
 };
 
+/// GUID for the H.264 encoding, high 10 profile.
+/// {8F0C337E-186C-48E9-A69D-7A8334089758}
+pub const NV_ENC_H264_PROFILE_HIGH_10_GUID: GUID = GUID {
+    Data1: 0x8f0c_337e,
+    Data2: 0x186c,
+    Data3: 0x48e9,
+    Data4: [0xa6, 0x9d, 0x7a, 0x83, 0x34, 0x08, 0x97, 0x58],
+};
+
+/// GUID for the H.264 encoding, high 4:2:2 profile.
+/// {FF3242E9-613C-4295-A1E8-2A7FE94D8133}
+pub const NV_ENC_H264_PROFILE_HIGH_422_GUID: GUID = GUID {
+    Data1: 0xff32_42e9,
+    Data2: 0x613c,
+    Data3: 0x4295,
+    Data4: [0xa1, 0xe8, 0x2a, 0x7f, 0xe9, 0x4d, 0x81, 0x33],
+};
+
 /// GUID for the H.264 high quality, `YCbCR444` digital color format profile.
 /// {7AC663CB-A598-4960-B844-339B261A7D52}
 pub const NV_ENC_H264_PROFILE_HIGH_444_GUID: GUID = GUID {
