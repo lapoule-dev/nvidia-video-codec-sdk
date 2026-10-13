@@ -273,6 +273,25 @@ impl CodecPictureParams {
             Self::Av1(_) => NV_ENC_CODEC_AV1_GUID,
         }
     }
+
+    /// HEVC picture parameters for one view of a multiview (MV-HEVC) frame,
+    /// with every other field left at its default.
+    ///
+    /// With MV-HEVC enabled (see
+    /// [`NV_ENC_CONFIG_HEVC::enable_mv_hevc`]), each frame is submitted once
+    /// per view in view order: `hevc_view(0)` for the base view, then
+    /// `hevc_view(1)` for the second view. To set other HEVC picture
+    /// parameters, build [`CodecPictureParams::Hevc`] directly and set its
+    /// `viewId` field.
+    ///
+    /// [`NV_ENC_CONFIG_HEVC::enable_mv_hevc`]: crate::sys::nvEncodeAPI::NV_ENC_CONFIG_HEVC::enable_mv_hevc
+    #[must_use]
+    pub fn hevc_view(view_id: u32) -> Self {
+        Self::Hevc(NV_ENC_PIC_PARAMS_HEVC {
+            viewId: view_id,
+            ..Default::default()
+        })
+    }
 }
 
 impl From<CodecPictureParams> for NV_ENC_CODEC_PIC_PARAMS {

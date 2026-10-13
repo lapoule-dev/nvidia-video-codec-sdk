@@ -11,6 +11,7 @@ use crate::sys::nvEncodeAPI::{
     GUID,
     NV_ENC_BUFFER_FORMAT,
     NV_ENC_CONFIG,
+    NV_ENC_CONFIG_HEVC,
     NV_ENC_INITIALIZE_PARAMS,
     NV_ENC_INITIALIZE_PARAMS_VER,
     NV_ENC_INPUT_RESOURCE_TYPE,
@@ -81,6 +82,47 @@ impl NV_ENC_INITIALIZE_PARAMS {
     }
 
     // TODO: Add other options
+}
+
+impl NV_ENC_CONFIG_HEVC {
+    /// Enable multiview HEVC (MV-HEVC) with `num_views` views.
+    ///
+    /// Sets the `enableMVHEVC` bit field and `numViews`. The SDK currently
+    /// supports only 2 views (stereo). Check support first with
+    /// [`Encoder::get_encode_caps`](super::encoder::Encoder::get_encode_caps)
+    /// and [`NV_ENC_CAPS::NV_ENC_CAPS_SUPPORT_MVHEVC_ENCODE`].
+    ///
+    /// The SDK disables MV-HEVC with LTR, alpha layer encoding,
+    /// unidirectional B-frames, pyramidal ME, lookahead, temporal filter,
+    /// split encoding, 2-pass rate control, and any tuning info other than
+    /// [`NV_ENC_TUNING_INFO::NV_ENC_TUNING_INFO_HIGH_QUALITY`].
+    ///
+    /// Each frame is then submitted once per view, in view order, with
+    /// [`CodecPictureParams::hevc_view`](super::session::CodecPictureParams::hevc_view).
+    ///
+    /// [`NV_ENC_CAPS::NV_ENC_CAPS_SUPPORT_MVHEVC_ENCODE`]: crate::sys::nvEncodeAPI::NV_ENC_CAPS::NV_ENC_CAPS_SUPPORT_MVHEVC_ENCODE
+    /// [`NV_ENC_TUNING_INFO::NV_ENC_TUNING_INFO_HIGH_QUALITY`]: crate::sys::nvEncodeAPI::NV_ENC_TUNING_INFO::NV_ENC_TUNING_INFO_HIGH_QUALITY
+    pub fn enable_mv_hevc(&mut self, num_views: u32) -> &mut Self {
+        self.set_enableMVHEVC(1);
+        self.numViews = num_views;
+        self
+    }
+}
+
+impl NV_ENC_CONFIG {
+    /// Enable multiview HEVC (MV-HEVC) with `num_views` views on an HEVC
+    /// encode config. See [`NV_ENC_CONFIG_HEVC::enable_mv_hevc`].
+    ///
+    /// # Safety
+    ///
+    /// `encodeCodecConfig` is a union: this config must hold an HEVC codec
+    /// config, e.g. one obtained from
+    /// [`Encoder::get_preset_config`](super::encoder::Encoder::get_preset_config)
+    /// with [`NV_ENC_CODEC_HEVC_GUID`](crate::sys::nvEncodeAPI::NV_ENC_CODEC_HEVC_GUID).
+    pub unsafe fn enable_mv_hevc(&mut self, num_views: u32) -> &mut Self {
+        self.encodeCodecConfig.hevcConfig.enable_mv_hevc(num_views);
+        self
+    }
 }
 
 impl NV_ENC_PIC_PARAMS {

@@ -13,6 +13,9 @@ use crate::sys::nvEncodeAPI::{
     GUID,
     NVENCAPI_VERSION,
     NV_ENC_BUFFER_FORMAT,
+    NV_ENC_CAPS,
+    NV_ENC_CAPS_PARAM,
+    NV_ENC_CAPS_PARAM_VER,
     NV_ENC_CONFIG,
     NV_ENC_CONFIG_VER,
     NV_ENC_DEVICE_TYPE,
@@ -331,6 +334,51 @@ impl Encoder {
         .result(self)?;
         supported_input_formats.truncate(actual_count as usize);
         Ok(supported_input_formats)
+    }
+
+    /// Query one encoder capability for the given codec.
+    ///
+    /// Returns the raw value reported by `NvEncGetEncodeCaps`. For boolean
+    /// capabilities such as
+    /// [`NV_ENC_CAPS::NV_ENC_CAPS_SUPPORT_MVHEVC_ENCODE`], a non-zero value
+    /// means the capability is supported.
+    ///
+    /// # Errors
+    ///
+    /// Could error if `encode_guid` or `caps` is invalid.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use cudarc::driver::CudaContext;
+    /// # use nvidia_video_codec_sdk::{
+    /// #     sys::nvEncodeAPI::{NV_ENC_CAPS, NV_ENC_CODEC_HEVC_GUID},
+    /// #     Encoder,
+    /// # };
+    /// # let cuda_ctx = CudaContext::new(0).unwrap();
+    /// let encoder = Encoder::initialize_with_cuda(cuda_ctx).unwrap();
+    /// let mv_hevc = encoder
+    ///     .get_encode_caps(
+    ///         NV_ENC_CODEC_HEVC_GUID,
+    ///         NV_ENC_CAPS::NV_ENC_CAPS_SUPPORT_MVHEVC_ENCODE,
+    ///     )
+    ///     .unwrap()
+    ///     != 0;
+    /// ```
+    pub fn get_encode_caps(
+        &self,
+        encode_guid: GUID,
+        caps: NV_ENC_CAPS,
+    ) -> Result<i32, EncodeError> {
+        let mut caps_param = NV_ENC_CAPS_PARAM {
+            version: NV_ENC_CAPS_PARAM_VER,
+            capsToQuery: caps,
+            ..Default::default()
+        };
+        let mut value = 0;
+        unsafe { (ENCODE_API.get_encode_caps)(self.ptr, encode_guid, &mut caps_param, &mut value) }
+            .result(self)?;
+        Ok(value)
     }
 
     /// Get the preset config struct from the given codec GUID, preset GUID,
