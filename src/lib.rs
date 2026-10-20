@@ -24,7 +24,9 @@
 //!
 //! # Decoding
 //!
-//! There is no safe wrapper yet.
+//! [`Decoder`] (Linux): an H.264 or HEVC stream in Annex B, one access unit
+//! at a time, through NVIDIA's own parser; pictures out in the order they
+//! are shown, copied to host memory as NV12 or P016.
 
 #![warn(
     missing_docs,

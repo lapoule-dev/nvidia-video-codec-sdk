@@ -6,6 +6,8 @@
 mod api;
 mod buffer;
 mod builders;
+#[cfg(target_os = "linux")]
+mod decoder;
 mod encoder;
 mod result;
 mod session;
@@ -20,6 +22,8 @@ pub use buffer::{
     EncoderOutput,
     RegisteredResource,
 };
+#[cfg(target_os = "linux")]
+pub use decoder::{DecodeCodec, DecodeError, Decoder, Picture};
 pub use encoder::{Encoder, EncoderInitParams};
 pub use result::{EncodeError, ErrorKind};
 pub use session::{CodecPictureParams, EncodePictureParams, Session};
